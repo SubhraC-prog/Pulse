@@ -1,7 +1,6 @@
 const CACHE_NAME = "pulse-cache-v2";
 
 const FILES_TO_CACHE = [
-  "./",
   "./index.html",
   "./Dashboard.html",
   "./manifest.json",
@@ -45,5 +44,6 @@ self.addEventListener("fetch", event => {
     })
   );
 });
+
 
 
