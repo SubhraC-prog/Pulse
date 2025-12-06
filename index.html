@@ -206,16 +206,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const remembered = localStorage.getItem('pulseRememberedUser');
   
   if(remembered){ $('login-email').value = remembered; $('remember-me').checked = true; }
-  if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js")
-      .then(reg => console.log("Service Worker registered:", reg))
-      .catch(err => console.log("SW registration failed:", err));
-  });
-}
-
+ 
 });
+</script>
+<script>
+ if ("serviceWorker" in navigator) {
+   window.addEventListener("load", () => {
+     navigator.serviceWorker.register("service-worker.js")
+       .then(reg => console.log("SW registered", reg))
+       .catch(err => console.log("SW error", err));
+   });
+ }
 </script>
 </body>
 </html>
+
 
