@@ -3,9 +3,7 @@
   "short_name": "Pulse",
   "description": "A personal productivity and performance dashboard with login, analytics, goal tracking and offline-first support.",
   "start_url": "./index.html",
-  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0f172a",
   "theme_color": "#4c1d95",
   "icons": [
@@ -16,5 +14,6 @@
     }
   ]
 }
+
 
 
