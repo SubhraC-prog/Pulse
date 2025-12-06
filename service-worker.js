@@ -1,12 +1,11 @@
-const CACHE_NAME = "pulse-cache-v1";
+const CACHE_NAME = "pulse-cache-v2";
 
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
   "./Dashboard.html",
   "./manifest.json",
-  "./Icon.png",
-  "./service-worker.js"
+  "./Icon.png"
 ];
 
 // Install SW
@@ -46,4 +45,5 @@ self.addEventListener("fetch", event => {
     })
   );
 });
+
 
