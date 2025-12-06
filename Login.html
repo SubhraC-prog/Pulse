@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pulse Growth Dashboard - Login</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin:0; 
+      font-family:'Quicksand', sans-serif; 
+      background: linear-gradient(135deg, #4c1d95, #3730a3);
+      color:#fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card {
+      background: rgba(30,41,59,0.92);
+      padding: 2rem;
+      border-radius: 1.2rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+    }
+    h2 { font-size: 1.8rem; margin-bottom:.5rem; color:#fff; }
+    p { font-size:.95rem; margin-bottom:12px; color:#cbd5e1; }
+    label{ display:block; text-align:left; margin-top:10px; margin-bottom:6px; font-size:.9rem; color:#cbd5e1; }
+    input[type="email"], input[type="password"], input[type="text"] {
+      width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,.06); background:rgba(7,16,42,.25); color:#fff;
+    }
+    .row{ display:flex; gap:8px }
+    .btn{ background:#3b82f6; border:none; color:#fff; padding:10px 14px; border-radius:8px; font-weight:600; cursor:pointer }
+    .btn.secondary{ background:transparent; border:1px solid rgba(255,255,255,.08) }
+    .remember{ display:flex; align-items:center; gap:8px; margin-top:12px; }
+    a.link{ color:#60a5fa; text-decoration:none; display:inline-block; margin-top:8px }
+    .tiny{ font-size:.85rem; color:#cbd5e1; }
+  
+    .transition-overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(11,26,44,.9); z-index:9999; opacity:0; pointer-events:none; transition:opacity .25s }
+    .transition-overlay.active{ opacity:1; pointer-events:all }
+    .spinner{ width:56px; height:56px; border-radius:50%; border:6px solid rgba(255,255,255,.12); border-top-color:#fff; animation:spin 1s linear infinite }
+    @keyframes spin{ to{ transform:rotate(360deg) } }
+    .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.65); display:none; align-items:center; justify-content:center; z-index:2000; padding:20px }
+    .modal-overlay.active{ display:flex }
+    .modal{ background:rgba(30,41,59,0.98); padding:20px; border-radius:12px; width:100%; max-width:480px; box-shadow:0 10px 30px rgba(0,0,0,.5) }
+    .modal h3{ margin:0 0 8px }
+    .status{ display:none; padding:10px; border-radius:8px; margin-top:12px }
+    .status.success{ background:rgba(34,197,94,.12); color:#22c55e; border:1px solid rgba(34,197,94,.18); display:block }
+    .status.error{ background:rgba(239,68,68,.08); color:#ef4444; border:1px solid rgba(239,68,68,.18); display:block }
+    @media(max-width:480px){ .card{ padding:18px } }
+  </style>
+</head>
+<body>
+
+  <div class="card" id="login-card">
+    <h2>Welcome to Pulse</h2>
+    <p class="lead">Login to access your personalized growth dashboard</p>
+
+    <label for="login-email">Email</label>
+    <input id="login-email" type="email" placeholder="you@example.com" />
+
+    <label for="login-password">Password</label>
+    <input id="login-password" type="password" placeholder="••••••••" />
+
+    <div class="remember">
+      <input id="remember-me" type="checkbox" />
+      <label for="remember-me" class="tiny">Remember me</label>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:8px; justify-content:center;">
+      <button class="btn" id="btn-login">Login</button>
+      <button class="btn secondary" id="btn-register">Register</button>
+    </div>
+
+    <a href="#" class="link" id="forgot-link">Forgot password?</a>
+  </div>
+
+  <div id="transition-overlay" class="transition-overlay" aria-hidden="true">
+    <div style="text-align:center">
+      <div class="spinner"></div>
+      <div style="margin-top:12px;font-weight:600;color:#fff">Loading your dashboard…</div>
+    </div>
+  </div>
+
+  <div id="forgot-modal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>Reset password</h3>
+      <p class="tiny">Enter registered email and your security answer to reset.</p>
+
+      <label for="fp-email">Registered email</label>
+      <input id="fp-email" type="email" />
+
+      <label for="fp-security">Security answer</label>
+      <input id="fp-security" type="text" />
+
+      <label for="fp-newpass">New password</label>
+      <input id="fp-newpass" type="password" />
+
+      <label for="fp-confirm">Confirm password</label>
+      <input id="fp-confirm" type="password" />
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn" id="fp-reset">Reset</button>
+        <button class="btn secondary" id="fp-cancel">Cancel</button>
+      </div>
+
+      <div id="fp-status" class="status"></div>
+    </div>
+  </div>
+
+<script>
+
+const DASH = "Dashboard.html"; 
+const LOGIN = "Login.html";  
+
+const $ = id => document.getElementById(id);
+const showOverlay = (on=true) => { const o = $('transition-overlay'); o.classList.toggle('active', on); };
+
+function getUsers(){ return JSON.parse(localStorage.getItem('pulseUsers') || '{}'); }
+function saveUsers(u){ localStorage.setItem('pulseUsers', JSON.stringify(u)); }
+
+function setLoggedIn(email, remember=false){
+  localStorage.setItem('pulseLoggedInUser', email);
+  if(remember) localStorage.setItem('pulseRememberedUser', email);
+  else localStorage.removeItem('pulseRememberedUser');
+  localStorage.setItem('pulseShowOverlay', '1');
+}
+
+function customLogin(){
+  const email = $('login-email').value.trim().toLowerCase();
+  const password = $('login-password').value;
+  if(!email || !password){ alert('Please enter both email and password.'); return; }
+  const users = getUsers();
+  if(!users[email]){ alert('No account found. Please register first.'); return; }
+  if(users[email].password !== password){ alert('Incorrect password.'); return; }
+
+  const remember = $('remember-me').checked;
+  setLoggedIn(email, remember);
+
+  showOverlay(true);
+  setTimeout(()=> { window.location.href = DASH; }, 700);
+}
+
+function registerUser(){
+  const email = $('login-email').value.trim().toLowerCase();
+  const password = $('login-password').value;
+  if(!email || !password){ alert('Please enter email and password to register.'); return; }
+  const security = prompt('Set a security answer (used for password reset):');
+  if(!security){ alert('Security answer required. Registration canceled.'); return; }
+  const users = getUsers();
+  if(users[email]){ alert('Account exists — please login.'); return; }
+  users[email] = { password: password, security: security.toLowerCase() };
+  saveUsers(users);
+  alert('Account created! You can now login.');
+  $('login-email').value = email;
+  $('login-password').value = '';
+}
+
+function openForgot(){
+  $('forgot-modal').classList.add('active');
+  $('fp-status').style.display = 'none';
+}
+function closeForgot(){
+  $('forgot-modal').classList.remove('active');
+  ['fp-email','fp-security','fp-newpass','fp-confirm'].forEach(id => $(id).value = '');
+  $('fp-status').style.display = 'none';
+}
+
+function resetPassword(){
+  const email = $('fp-email').value.trim().toLowerCase();
+  const security = $('fp-security').value.trim().toLowerCase();
+  const newPass = $('fp-newpass').value;
+  const confirm = $('fp-confirm').value;
+  const status = $('fp-status');
+
+  if(!email){ status.textContent='Enter email'; status.className='status error'; status.style.display='block'; return; }
+  if(!security){ status.textContent='Enter security answer'; status.className='status error'; status.style.display='block'; return; }
+  if(!newPass || newPass.length < 6){ status.textContent='Password should be at least 6 characters'; status.className='status error'; status.style.display='block'; return; }
+  if(newPass !== confirm){ status.textContent='Passwords do not match'; status.className='status error'; status.style.display='block'; return; }
+
+  const users = getUsers();
+  if(!users[email]){ status.textContent='No account with that email'; status.className='status error'; status.style.display='block'; return; }
+  if(users[email].security !== security){ status.textContent='Security answer incorrect'; status.className='status error'; status.style.display='block'; return; }
+
+  users[email].password = newPass;
+  saveUsers(users);
+  status.textContent = 'Password reset successfully — you can now login'; status.className='status success'; status.style.display='block';
+  setTimeout(closeForgot, 1600);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  $('btn-login').addEventListener('click', customLogin);
+  $('btn-register').addEventListener('click', registerUser);
+  $('forgot-link').addEventListener('click', e => { e.preventDefault(); openForgot(); });
+  $('fp-cancel').addEventListener('click', closeForgot);
+  $('fp-reset').addEventListener('click', resetPassword);
+
+  const remembered = localStorage.getItem('pulseRememberedUser');
+  if(remembered){ $('login-email').value = remembered; $('remember-me').checked = true; }
+});
+</script>
+</body>
+</html>

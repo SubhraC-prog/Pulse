@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulse - Growth Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-surface: #1e293b;
+      --accent-purple: #7e22ce;
+      --accent-blue: #3b82f6;
+      --text-primary: #f1f5f9;
+      --text-heading: #ffffff;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--bg-primary); color: var(--text-primary); min-height: 100vh; padding-bottom: 80px; }
+    .app-container { max-width: 100%; overflow-x: hidden; }
+
+  
+    .app-header { background-color: var(--bg-surface); padding: 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+    .app-header h1 { font-weight: 700; font-size: 1.5rem; letter-spacing: -0.025em; color: var(--text-heading); }
+    .header-actions{ display:flex; gap:12px; align-items:center; color:var(--text-primary); }
+    .user-pill{ background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 999px; display:flex; gap:8px; align-items:center; color:var(--text-primary); font-weight:600; font-size:.9rem;}
+    .user-menu-btn{ background:none;border:none;color:var(--text-primary); cursor:pointer; padding:6px; border-radius:8px; }
+    .user-dropdown{ position:absolute; right:16px; top:64px; background:var(--bg-surface); border-radius:8px; padding:8px; display:none; box-shadow:0 10px 30px rgba(0,0,0,.4); z-index:120; }
+    .user-dropdown .item{ padding:8px 10px; cursor:pointer; color:var(--text-primary); opacity:.95; }
+    .user-dropdown .item:hover{ background:rgba(255,255,255,0.02); }
+
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--bg-surface); display: flex; justify-content: space-around; padding: .8rem; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,.2); }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-primary); font-size: .8rem; opacity: .7; transition: .2s; }
+    .nav-item.active { opacity: 1; color: var(--accent-purple); }
+    .nav-item i { font-size: 1.2rem; margin-bottom: .3rem; }
+    .view { display: none; padding: 1rem; animation: fadeIn .3s ease-in-out; }
+    .view.active { display: block; }
+    @keyframes fadeIn { from{opacity:0; transform: translateY(10px);} to{opacity:1; transform: translateY(0);} }
+    .card { background-color: var(--bg-surface); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; box-shadow: 0 4px 8px rgba(0,0,0,.1); }
+    .card-header{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .card-title{ font-weight: 600; font-size: 1.1rem; color: var(--text-heading); }
+    .goal-card{ background: linear-gradient(135deg, var(--accent-purple), #581c87); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; position: relative; }
+    .goal-header{ display:flex; justify-content: space-between; align-items:center; margin-bottom:.8rem; }
+    .goal-title{ font-weight: 600; color:#fff; }
+    .goal-date{ font-size:.8rem; opacity:.8; color:#fff; }
+    .progress-container{ height:6px; background-color: rgba(255,255,255,.2); border-radius:3px; overflow:hidden; margin-bottom:.8rem; }
+    .progress-bar{ height:100%; background-color:#fff; border-radius:3px; transition: width .3s ease; }
+    .goal-actions{ display:flex; justify-content:flex-end; gap:.8rem; }
+    .goal-btn{ background:none; border:none; color:#fff; font-size:1rem; cursor:pointer; }
+    .add-goal-btn{ background-color: var(--accent-blue); color:#fff; border:none; border-radius:50%; width:50px; height:50px; position:fixed; bottom:80px; right:20px; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 12px rgba(59,130,246,.4); z-index:90; }
+    .category-card{ background-color: var(--bg-surface); border-radius: 12px; padding: 1.2rem; margin-bottom: 1.2rem; position:relative; overflow:hidden; }
+    .category-card::before{ content:''; position:absolute; top:0; right:0; width:100%; height:4px; background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue)); }
+    .category-header{ display:flex; align-items:center; margin-bottom:1rem; }
+    .category-icon{ font-size:1.5rem; margin-right:.8rem; color: var(--accent-blue); }
+    .category-title{ font-weight:600; font-size:1.2rem; color: var(--text-heading); }
+    .subcategory-item{ display:flex; justify-content:space-between; align-items:center; padding:.8rem 0; border-bottom:1px solid rgba(255,255,255,.1); }
+    .subcategory-item:last-child{ border-bottom:none; }
+    .subcategory-name{ display:flex; align-items:center; }
+    .subcategory-name i{ margin-right:.5rem; color: var(--accent-purple); }
+    .score-buttons{ display:flex; gap:.4rem; }
+    .score-btn{ width:32px; height:32px; border-radius:50%; border:1px solid var(--accent-purple); background:transparent; color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-size:.9rem; cursor:pointer; transition:.2s; }
+    .score-btn.active{ background: linear-gradient(135deg, #ef4444, #f59e0b, #22c55e); color:#fff; border:none; transform: scale(1.1); }
+    .note-input{ margin-top:.8rem; width:100%; display:none; }
+    .note-input textarea{ width:100%; background-color: rgba(30,41,59,.5); border:1px solid rgba(126,34,206,.3); border-radius:8px; padding:.8rem; color:var(--text-primary); resize:none; }
+    .timeline{ position:relative; margin-left:1rem; padding-left:1.5rem; }
+    .timeline::before{ content:''; position:absolute; left:0; top:0; height:100%; width:2px; background: linear-gradient(to bottom, var(--accent-purple), var(--accent-blue)); }
+    .timeline-item{ position:relative; margin-bottom:2rem; }
+    .timeline-item::before{ content:''; position:absolute; left:-1.9rem; top:.5rem; width:12px; height:12px; border-radius:50%; background-color: var(--accent-blue); z-index:2; }
+    .history-card{ background-color: var(--bg-surface); border-radius:12px; padding:1.2rem; margin-bottom:1rem; border-left:4px solid; cursor:pointer; }
+    .history-date{ font-weight:600; margin-bottom:.5rem; color: var(--text-heading); display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+    .history-content{ display:none; margin-top:.8rem; }
+    .history-score{ display:flex; align-items:center; margin-bottom:.5rem; }
+    .history-score i{ margin-right:.5rem; color: var(--accent-purple); }
+    .chart-container{ position:relative; height:250px; margin-bottom:1.5rem; }
+    .filter-chips{ display:flex; overflow-x:auto; gap:.5rem; margin-bottom:1rem; padding:.5rem 0; -ms-overflow-style:none; scrollbar-width:none; }
+    .filter-chips::-webkit-scrollbar{ display:none; }
+    .chip{ background-color: var(--bg-surface); border:1px solid var(--accent-purple); border-radius:20px; padding:.5rem 1rem; font-size:.9rem; white-space:nowrap; cursor:pointer; transition:.2s; }
+    .chip.active{ background-color: var(--accent-purple); color:#fff; }
+    .focus-area{ display:flex; align-items:center; background: linear-gradient(135deg, var(--accent-purple), #581c87); border-radius:12px; padding:1rem; margin-bottom:1.5rem; }
+    .focus-icon{ font-size:2rem; margin-right:1rem; color:#fff; }
+    .focus-content h3{ font-size:1rem; margin-bottom:.3rem; color:#fff; }
+    .focus-content p{ font-size:.9rem; opacity:.9; color:#fff; }
+    .modal-overlay{ position:fixed; inset:0; background-color: rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal{ background-color: var(--bg-surface); border-radius:12px; width:90%; max-width:420px; padding:1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,.2); }
+    .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
+    .modal-title{ font-weight:600; font-size:1.2rem; color: var(--text-heading); }
+    .close-modal{ background:none; border:none; color: var(--text-primary); font-size:1.5rem; cursor:pointer; }
+    .form-group{ margin-bottom:1rem; }
+    .form-group label{ display:block; margin-bottom:.5rem; font-size:.9rem; }
+    .form-group input, .form-group select, .form-group textarea{ width:100%; padding:.8rem; border-radius:8px; border:1px solid rgba(126,34,206,.3); background-color: rgba(30,41,59,.5); color: var(--text-primary); }
+    .form-actions{ display:flex; justify-content:flex-end; gap:.8rem; margin-top:1.5rem; }
+    .btn{ padding:.8rem 1.5rem; border-radius:8px; border:none; font-weight:600; cursor:pointer; transition:.2s; }
+    .btn-primary{ background-color: var(--accent-purple); color:#fff; }
+    .btn-secondary{ background-color: var(--bg-surface); color: var(--text-primary); border:1px solid var(--accent-purple); }
+    .save-all-btn{ background-color: var(--accent-purple); color:#fff; border:none; border-radius:8px; padding:.8rem 1.5rem; font-weight:600; cursor:pointer; margin:1rem 0; display:block; width:100%; }
+    .date-picker-container{ margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .date-picker{ background-color: var(--bg-surface); border:1px solid var(--accent-purple); border-radius:8px; padding:.5rem; color: var(--text-primary); }
+    .history-actions{ display:flex; justify-content:flex-end; gap:.5rem; margin-top:.5rem; }
+    .history-btn{ background:none; border:none; color: var(--text-primary); cursor:pointer; font-size:.9rem; opacity:.7; transition:opacity .2s; }
+    .history-btn:hover{ opacity:1; }
+    .calendar-modal{ max-width:350px; }
+    .calendar{ display:grid; grid-template-columns: repeat(7, 1fr); gap:5px; margin-bottom:1rem; }
+    .calendar-header{ grid-column: span 7; display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; }
+    .calendar-day{ text-align:center; padding:.5rem 0; font-weight:600; font-size:.8rem; }
+    .calendar-date{ text-align:center; padding:.5rem; border-radius:50%; cursor:pointer; transition: background-color .2s; }
+    .calendar-date:hover{ background-color: rgba(126,34,206,.2); }
+    .calendar-date.has-entry{ background-color: var(--accent-purple); }
+    .calendar-date.selected{ background-color: var(--accent-blue); }
+    .subcategory-filter{ margin-top:1rem; display:none; }
+    .subcategory-filter.active{ display:flex; }
+    .split-goals{ display:grid; gap:1rem; }
+    @media(min-width:720px){ .split-goals{ grid-template-columns: 1fr 1fr; } }
+    @media (max-width:360px){ .score-btn{ width:28px; height:28px; font-size:.8rem; } .card{ padding:1rem; } }
+
+   
+    #startup-overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#3730a3,#4c1d95); z-index:9998; opacity:0; pointer-events:none; transition:opacity .25s; }
+    #startup-overlay.active{ opacity:1; pointer-events:all; }
+    .startup-box{ background:rgba(0,0,0,.12); padding:20px; border-radius:12px; text-align:center; color:#fff; }
+    .small-spinner{ width:44px; height:44px; border-radius:50%; border:5px solid rgba(255,255,255,.12); border-top-color:#fff; animation:spin 1s linear infinite; margin:0 auto; }
+    @keyframes spin{ to{ transform:rotate(360deg) } }
+
+  </style>
+</head>
+<body>
+
+ 
+  <div id="startup-overlay" aria-hidden="true">
+    <div class="startup-box">
+      <div class="small-spinner"></div>
+      <div style="margin-top:12px;font-weight:600">Preparing your Pulse dashboard…</div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <header class="app-header">
+      <h1>Pulse</h1>
+      <div class="header-actions">
+        <div style="position:relative;">
+          <div id="user-pill-placeholder" class="user-pill" aria-hidden="true">
+            <i class="fas fa-user-circle"></i>
+            <span id="user-email">—</span>
+            <button id="user-menu-toggle" class="user-menu-btn"><i class="fas fa-caret-down"></i></button>
+          </div>
+          <div id="user-dropdown" class="user-dropdown" role="menu" aria-hidden="true">
+            <div class="item" id="menu-profile"><i class="fas fa-id-badge" style="margin-right:8px"></i>Profile</div>
+            <div class="item" id="menu-logout"><i class="fas fa-sign-out-alt" style="margin-right:8px"></i>Logout</div>
+          </div>
+        </div>
+        <div class="header-actions-icon"><i class="fas fa-bars"></i></div>
+      </div>
+    </header>
+
+    <main>
+    
+      <section id="daily-view" class="view active">
+        <div class="date-picker-container">
+          <label for="entry-date">Date:</label>
+          <input type="date" id="entry-date" class="date-picker" />
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Goals</h2>
+          </div>
+          <div class="split-goals">
+            <div>
+              <h3 class="card-title" style="margin-bottom:.6rem;">In Progress</h3>
+              <div id="goals-inprogress"></div>
+            </div>
+            <div>
+              <h3 class="card-title" style="margin-bottom:.6rem;">Completed (Review)</h3>
+              <div id="goals-completed"></div>
+            </div>
+          </div>
+        </div>
+
+      
+        <div class="category-card" data-category="productivity">
+          <div class="category-header">
+            <i class="fas fa-tasks category-icon"></i>
+            <h2 class="category-title">Productivity</h2>
+          </div>
+          <div class="subcategory-item" data-subkey="task-completion">
+            <div class="subcategory-name"><i class="fas fa-check-circle"></i><span>Task Completion</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+          <div class="subcategory-item" data-subkey="time-management">
+            <div class="subcategory-name"><i class="fas fa-clock"></i><span>Time Management</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+          <div class="subcategory-item" data-subkey="focus-concentration">
+            <div class="subcategory-name"><i class="fas fa-bullseye"></i><span>Focus/Concentration</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+        </div>
+
+        
+        <div class="category-card" data-category="health">
+          <div class="category-header">
+            <i class="fas fa-heartbeat category-icon"></i>
+            <h2 class="category-title">Health</h2>
+          </div>
+          <div class="subcategory-item" data-subkey="exercise">
+            <div class="subcategory-name"><i class="fas fa-running"></i><span>Exercise</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+          <div class="subcategory-item" data-subkey="nutrition">
+            <div class="subcategory-name"><i class="fas fa-utensils"></i><span>Nutrition</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+          <div class="subcategory-item" data-subkey="sleep-quality">
+            <div class="subcategory-name"><i class="fas fa-bed"></i><span>Sleep Quality</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+        </div>
+
+       
+        <div class="category-card" data-category="development">
+          <div class="category-header">
+            <i class="fas fa-brain category-icon"></i>
+            <h2 class="category-title">Development</h2>
+          </div>
+          <div class="subcategory-item" data-subkey="new-skills-acquired">
+            <div class="subcategory-name"><i class="fas fa-lightbulb"></i><span>New Skills Acquired</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+          <div class="subcategory-item" data-subkey="reading-studying">
+            <div class="subcategory-name"><i class="fas fa-book"></i><span>Reading/Studying</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+          <div class="subcategory-item" data-subkey="application-of-knowledge">
+            <div class="subcategory-name"><i class="fas fa-code"></i><span>Application of Knowledge</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+        </div>
+
+       
+        <div class="category-card" data-category="wellbeing">
+          <div class="category-header">
+            <i class="fas fa-smile category-icon"></i>
+            <h2 class="category-title">Well-being</h2>
+          </div>
+          <div class="subcategory-item" data-subkey="stress-management">
+            <div class="subcategory-name"><i class="fas fa-wind"></i><span>Stress Management</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+          <div class="subcategory-item" data-subkey="emotional-state">
+            <div class="subcategory-name"><i class="fas fa-heart"></i><span>Emotional State</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+          <div class="subcategory-item" data-subkey="mindfulness-meditation">
+            <div class="subcategory-name"><i class="fas fa-spa"></i><span>Mindfulness/Meditation</span></div>
+            <div class="score-buttons">
+              <button class="score-btn" data-value="1">1</button>
+              <button class="score-btn" data-value="2">2</button>
+              <button class="score-btn" data-value="3">3</button>
+              <button class="score-btn" data-value="4">4</button>
+              <button class="score-btn" data-value="5">5</button>
+            </div>
+          </div>
+          <div class="note-input"><textarea placeholder="Why did you choose this score?"></textarea></div>
+        </div>
+
+        <button class="save-all-btn" id="save-all-btn"><i class="fas fa-save"></i> Save All Entries</button>
+        <button class="add-goal-btn"><i class="fas fa-plus"></i></button>
+      </section>
+
+      <section id="history-view" class="view">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Your History</h2>
+            <button class="filter-btn" id="history-calendar-btn"><i class="fas fa-calendar"></i></button>
+          </div>
+          <div class="timeline" id="history-timeline"></div>
+        </div>
+      </section>
+
+     
+      <section id="insights-view" class="view">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Monthly Insights</h2>
+            <select class="month-picker" id="insights-month-picker"></select>
+          </div>
+
+          <div class="focus-area" id="focus-area">
+            <div class="focus-icon"><i class="fas fa-bullseye"></i></div>
+            <div class="focus-content">
+              <h3>Focus Area This Month</h3>
+              <p id="focus-area-text">No data available</p>
+            </div>
+          </div>
+
+          <div class="filter-chips" id="category-chips">
+            <div class="chip active" data-category="all">All Categories</div>
+            <div class="chip" data-category="productivity">Productivity</div>
+            <div class="chip" data-category="health">Health</div>
+            <div class="chip" data-category="development">Development</div>
+            <div class="chip" data-category="wellbeing">Well-being</div>
+          </div>
+
+          <div class="filter-chips subcategory-filter" id="productivity-subchips">
+            <div class="chip active" data-subcategory="all">All</div>
+            <div class="chip" data-subcategory="task-completion">Task Completion</div>
+            <div class="chip" data-subcategory="time-management">Time Management</div>
+            <div class="chip" data-subcategory="focus-concentration">Focus/Concentration</div>
+          </div>
+          <div class="filter-chips subcategory-filter" id="health-subchips">
+            <div class="chip active" data-subcategory="all">All</div>
+            <div class="chip" data-subcategory="exercise">Exercise</div>
+            <div class="chip" data-subcategory="nutrition">Nutrition</div>
+            <div class="chip" data-subcategory="sleep-quality">Sleep Quality</div>
+          </div>
+          <div class="filter-chips subcategory-filter" id="development-subchips">
+            <div class="chip active" data-subcategory="all">All</div>
+            <div class="chip" data-subcategory="new-skills-acquired">New Skills</div>
+            <div class="chip" data-subcategory="reading-studying">Reading/Studying</div>
+            <div class="chip" data-subcategory="application-of-knowledge">Application</div>
+          </div>
+          <div class="filter-chips subcategory-filter" id="wellbeing-subchips">
+            <div class="chip active" data-subcategory="all">All</div>
+            <div class="chip" data-subcategory="stress-management">Stress</div>
+            <div class="chip" data-subcategory="emotional-state">Emotional</div>
+            <div class="chip" data-subcategory="mindfulness-meditation">Mindfulness</div>
+          </div>
+
+          <div class="chart-container"><canvas id="score-trend-chart"></canvas></div>
+          <h3 style="margin-bottom:1rem;">Improvement Priority</h3>
+          <div class="chart-container"><canvas id="priority-chart"></canvas></div>
+          <h3 style="margin:1.5rem 0 1rem;">Goal Progress</h3>
+          <div class="chart-container"><canvas id="goals-chart"></canvas></div>
+          <h3 style="margin:1.5rem 0 1rem;">Fastest-to-Finish (AI ETA)</h3>
+          <div class="chart-container"><canvas id="eta-chart"></canvas></div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <div class="nav-item active" data-view="daily-view"><i class="fas fa-plus-circle"></i><span>Today</span></div>
+      <div class="nav-item" data-view="history-view"><i class="fas fa-history"></i><span>History</span></div>
+      <div class="nav-item" data-view="insights-view"><i class="fas fa-chart-line"></i><span>Insights</span></div>
+    </nav>
+  </div>
+
+  <div class="modal-overlay" id="goal-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Add / Edit Goal</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <form id="goal-form">
+        <input type="hidden" id="edit-goal-id" value="" />
+        <div class="form-group">
+          <label for="goal-title">Goal Title</label>
+          <input type="text" id="goal-title" placeholder="What do you want to achieve?" />
+        </div>
+        <div class="form-group">
+          <label for="goal-category">Category</label>
+          <select id="goal-category">
+            <option value="productivity">Productivity</option>
+            <option value="health">Health</option>
+            <option value="development">Development</option>
+            <option value="wellbeing">Well-being</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="goal-date">Target Date</label>
+          <input type="date" id="goal-date" />
+        </div>
+        <div class="form-group">
+          <label for="goal-progress">Current Progress (%)</label>
+          <input type="number" id="goal-progress" min="0" max="100" value="0" />
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Goal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <div class="modal-overlay" id="calendar-modal">
+    <div class="modal calendar-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Select Date</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
+          <h3 id="calendar-month">Month</h3>
+          <button id="next-month"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="calendar">
+          <div class="calendar-day">Sun</div><div class="calendar-day">Mon</div><div class="calendar-day">Tue</div><div class="calendar-day">Wed</div><div class="calendar-day">Thu</div><div class="calendar-day">Fri</div><div class="calendar-day">Sat</div>
+      
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  
+    let userData = { entries: [], goals: [] };
+
+    function loadUserData(){ const saved = localStorage.getItem('pulseUserData'); if(saved){ userData = JSON.parse(saved); } }
+    function saveUserData(){ localStorage.setItem('pulseUserData', JSON.stringify(userData)); }
+
+    function initApp(){
+      loadUserData();
+      setupNavigation();
+      setupGoalModal();
+      setupScoreButtons();
+      setupDatePicker();
+      setupCalendarModal();
+      setupInsightsFilters();
+      buildMonthPicker();
+      loadGoals();
+      loadHistory();
+      updateInsights();
+    }
+    function setupNavigation(){
+      const navItems = document.querySelectorAll('.nav-item');
+      const views = document.querySelectorAll('.view');
+      navItems.forEach(item=>{
+        item.addEventListener('click',()=>{
+          const viewId = item.getAttribute('data-view');
+          navItems.forEach(n=>n.classList.remove('active')); item.classList.add('active');
+          views.forEach(v=>v.classList.remove('active')); document.getElementById(viewId).classList.add('active');
+          if(viewId==='history-view'){ loadHistory(); }
+          if(viewId==='insights-view'){ updateInsights(); }
+        });
+      });
+    }
+
+    function setupGoalModal(){
+      const addBtn = document.querySelector('.add-goal-btn');
+      const modal = document.getElementById('goal-modal');
+      const closeBtns = modal.querySelectorAll('.close-modal');
+      addBtn.addEventListener('click',()=>{ modal.style.display='flex'; });
+      closeBtns.forEach(b=>b.addEventListener('click',()=>{ modal.style.display='none'; }));
+      document.getElementById('goal-form').addEventListener('submit',(e)=>{ e.preventDefault(); addOrUpdateGoal(); modal.style.display='none'; });
+    }
+
+    function addOrUpdateGoal(){
+      const title = document.getElementById('goal-title').value.trim();
+      const category = document.getElementById('goal-category').value;
+      const date = document.getElementById('goal-date').value;
+      const progress = Math.max(0, Math.min(100, parseInt(document.getElementById('goal-progress').value||'0')));
+      const editId = document.getElementById('edit-goal-id').value;
+      if(!title){ alert('Please enter a goal title'); return; }
+      if(editId){
+        const idx = userData.goals.findIndex(g=>g.id===editId);
+        if(idx!==-1){ userData.goals[idx] = { ...userData.goals[idx], title, category, date, progress }; }
+        document.getElementById('edit-goal-id').value='';
+      }else{
+        userData.goals.push({ id: Date.now().toString(), title, category, date, progress, createdAt: new Date().toISOString(), history: [{ts:Date.now(), progress}] });
+      }
+      saveUserData();
+      document.getElementById('goal-form').reset();
+      loadGoals();
+      updateInsights();
+    }
+
+    function loadGoals(){
+      const inProg = document.getElementById('goals-inprogress');
+      const done = document.getElementById('goals-completed');
+      inProg.innerHTML=''; done.innerHTML='';
+      if(userData.goals.length===0){ inProg.innerHTML='<p>No goals yet. Add one!</p>'; return; }
+      userData.goals.forEach(goal=>{
+        const host = (parseInt(goal.progress)>=100)? done : inProg;
+        const el = document.createElement('div'); el.className='goal-card';
+        el.innerHTML = `
+          <div class="goal-header"><h3 class="goal-title">${escapeHtml(goal.title)}</h3><span class="goal-date">${formatDate(goal.date)}</span></div>
+          <div class="progress-container"><div class="progress-bar" style="width:${Math.min(100, Math.max(0, parseInt(goal.progress)||0))}%"></div></div>
+          <div class="goal-actions">
+            <button class="goal-btn edit-goal" data-id="${goal.id}"><i class="fas fa-edit"></i></button>
+            <button class="goal-btn delete-goal" data-id="${goal.id}"><i class="fas fa-trash"></i></button>
+          </div>`;
+        host.appendChild(el);
+      });
+      document.querySelectorAll('.edit-goal').forEach(btn=>btn.addEventListener('click',e=>editGoal(e.currentTarget.getAttribute('data-id'))));
+      document.querySelectorAll('.delete-goal').forEach(btn=>btn.addEventListener('click',e=>deleteGoal(e.currentTarget.getAttribute('data-id'))));
+    }
+
+    function editGoal(id){ const g = userData.goals.find(x=>x.id===id); if(!g) return; document.getElementById('goal-title').value=g.title; document.getElementById('goal-category').value=g.category; document.getElementById('goal-date').value=g.date||''; document.getElementById('goal-progress').value=g.progress||0; document.getElementById('edit-goal-id').value=g.id; document.getElementById('goal-modal').style.display='flex'; }
+    function deleteGoal(id){ if(confirm('Delete this goal?')){ userData.goals = userData.goals.filter(g=>g.id!==id); saveUserData(); loadGoals(); updateInsights(); } }
+
+    function setupScoreButtons(){
+      document.querySelectorAll('.score-btn').forEach(btn=>{
+        btn.addEventListener('click',e=>{
+          const buttons = e.currentTarget.parentElement.querySelectorAll('.score-btn');
+          buttons.forEach(b=>b.classList.remove('active')); e.currentTarget.classList.add('active');
+          const noteInput = e.currentTarget.closest('.subcategory-item').nextElementSibling; if(noteInput && noteInput.classList.contains('note-input')){ noteInput.style.display='block'; }
+        });
+      });
+      document.getElementById('save-all-btn').addEventListener('click', saveAllEntries);
+    }
+
+    function saveAllEntries(){
+      const entryDate = document.getElementById('entry-date').value || new Date().toISOString().slice(0,10);
+      const entryData = { date: entryDate, categories: {} };
+      document.querySelectorAll('.category-card').forEach(card=>{
+        const category = card.getAttribute('data-category'); entryData.categories[category] = {};
+        card.querySelectorAll('.subcategory-item').forEach(item=>{
+          const subkey = item.getAttribute('data-subkey');
+          const activeBtn = item.querySelector('.score-btn.active');
+          const score = activeBtn ? parseInt(activeBtn.getAttribute('data-value')) : null;
+          const noteInput = item.nextElementSibling; const note = (noteInput && noteInput.classList.contains('note-input')) ? (noteInput.querySelector('textarea').value||'') : '';
+          entryData.categories[category][subkey] = { score, note };
+        });
+      });
+      const idx = userData.entries.findIndex(e=>e.date===entryDate);
+      if(idx!==-1){ userData.entries[idx] = entryData; } else { userData.entries.push(entryData); }
+      saveUserData(); buildMonthPicker(); alert('Entries saved successfully!');
+      document.querySelectorAll('.score-btn.active').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.note-input').forEach(n=>{ n.style.display='none'; const ta=n.querySelector('textarea'); if(ta) ta.value=''; });
+      loadHistory(); updateInsights();
+    }
+
+    function setupDatePicker(){ const dp = document.getElementById('entry-date'); const today = new Date().toISOString().slice(0,10); dp.value = today; dp.addEventListener('change', ()=>loadEntryForDate(dp.value)); }
+
+    function loadEntryForDate(date){
+      const entry = userData.entries.find(e=>e.date===date);
+      document.querySelectorAll('.score-btn.active').forEach(btn=>btn.classList.remove('active'));
+      document.querySelectorAll('.note-input').forEach(n=>{ n.style.display='none'; const ta=n.querySelector('textarea'); if(ta) ta.value=''; });
+      if(!entry) return;
+      Object.keys(entry.categories).forEach(cat=>{
+        Object.entries(entry.categories[cat]).forEach(([subkey,data])=>{
+          const item = document.querySelector(`.category-card[data-category="${cat}"] .subcategory-item[data-subkey="${subkey}"]`);
+          if(!item) return; if(data && data.score!=null){ item.querySelectorAll('.score-btn').forEach(b=>{ if(parseInt(b.getAttribute('data-value'))===parseInt(data.score)){ b.classList.add('active'); } }); }
+          const noteInput = item.nextElementSibling; if(noteInput && noteInput.classList.contains('note-input')){ if(data && data.note){ noteInput.style.display='block'; noteInput.querySelector('textarea').value=data.note; } }
+        });
+      });
+    }
+
+  
+    function loadHistory(){
+      const tl = document.getElementById('history-timeline'); tl.innerHTML='';
+      if(userData.entries.length===0){ tl.innerHTML='<p>No entries yet. Start by adding your first entry!</p>'; return; }
+      const sorted = [...userData.entries].sort((a,b)=>new Date(b.date)-new Date(a.date));
+      sorted.forEach(entry=>{
+        let total=0,count=0; Object.values(entry.categories).forEach(cat=>{ Object.values(cat).forEach(sc=>{ if(sc.score!=null){ total+=parseInt(sc.score); count++; } }); });
+        const avg = count>0 ? (total/count).toFixed(1) : 'N/A';
+        const item = document.createElement('div'); item.className='timeline-item';
+        item.innerHTML = `<div class="history-card"><div class="history-date">${formatDate(entry.date)} <span>Average: ${avg}</span> <i class="fas fa-chevron-down toggle-history"></i></div>
+          <div class="history-content">${Object.entries(entry.categories).map(([c,subs])=>`<div class="history-score"><i class="fas fa-${getCategoryIcon(c)}"></i><span>${capitalizeFirstLetter(c)}: ${calculateCategoryAverage(subs)}</span></div>`).join('')}
+            <div class="history-actions"><button class="history-btn edit-entry" data-date="${entry.date}"><i class="fas fa-edit"></i> Edit</button><button class="history-btn delete-entry" data-date="${entry.date}"><i class="fas fa-trash"></i> Delete</button></div>
+          </div></div>`;
+        tl.appendChild(item);
+      });
+      document.querySelectorAll('.toggle-history').forEach(b=>b.addEventListener('click',e=>{ const c=e.currentTarget.parentElement.nextElementSibling; c.style.display = (c.style.display==='block')?'none':'block'; e.currentTarget.classList.toggle('fa-chevron-up'); e.currentTarget.classList.toggle('fa-chevron-down'); }));
+      document.querySelectorAll('.edit-entry').forEach(b=>b.addEventListener('click',e=>{ const d=e.currentTarget.getAttribute('data-date'); editEntry(d); }));
+      document.querySelectorAll('.delete-entry').forEach(b=>b.addEventListener('click',e=>{ const d=e.currentTarget.getAttribute('data-date'); deleteEntry(d); }));
+    }
+
+    function editEntry(date){ document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.querySelector('.nav-item[data-view="daily-view"]').classList.add('active'); document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById('daily-view').classList.add('active'); document.getElementById('entry-date').value=date; loadEntryForDate(date); }
+    function deleteEntry(date){ if(confirm('Delete this entry?')){ userData.entries = userData.entries.filter(e=>e.date!==date); saveUserData(); loadHistory(); buildMonthPicker(); updateInsights(); } }
+
+
+    function setupInsightsFilters(){
+      const catChips = document.querySelectorAll('#category-chips .chip');
+      catChips.forEach(ch=>{
+        ch.addEventListener('click',()=>{
+          catChips.forEach(c=>c.classList.remove('active')); ch.classList.add('active');
+          document.querySelectorAll('.subcategory-filter').forEach(f=>f.classList.remove('active'));
+          const cat = ch.getAttribute('data-category'); if(cat!=='all'){ const sub = document.getElementById(`${cat}-subchips`); if(sub) sub.classList.add('active'); }
+          updateInsights();
+        });
+      });
+      document.querySelectorAll('.subcategory-filter .chip').forEach(ch=>{
+        ch.addEventListener('click',()=>{ const parent = ch.closest('.subcategory-filter'); parent.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); ch.classList.add('active'); updateInsights(); });
+      });
+      document.getElementById('insights-month-picker').addEventListener('change', updateInsights);
+    }
+
+    function buildMonthPicker(){
+      const sel = document.getElementById('insights-month-picker');
+      const months = new Set();
+      userData.entries.forEach(e=>{ const d = new Date(e.date); const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; months.add(key); });
+      const arr = Array.from(months).sort().reverse();
+      const label = (key)=>{ const [y,m]=key.split('-'); const date = new Date(parseInt(y), parseInt(m)-1, 1); return date.toLocaleDateString(undefined,{month:'long', year:'numeric'}); };
+      sel.innerHTML = `<option value="all">All Time</option>` + arr.map(k=>`<option value="${k}">${label(k)}</option>`).join('');
+    }
+
+    function updateInsights(){
+      const selectedCategory = document.querySelector('#category-chips .chip.active').getAttribute('data-category');
+      let selectedSubcategory = 'all'; if(selectedCategory!=='all'){ const subFilter = document.getElementById(`${selectedCategory}-subchips`); if(subFilter){ const active = subFilter.querySelector('.chip.active'); if(active){ selectedSubcategory = active.getAttribute('data-subcategory'); } } }
+      const monthKey = document.getElementById('insights-month-picker').value || 'all';
+      const insights = calculateInsights(selectedCategory, selectedSubcategory, monthKey);
+      document.getElementById('focus-area-text').textContent = insights.focusArea;
+      updateScoreTrendChart(insights.scoreTrend);
+      updatePriorityChart(insights.priorities);
+      updateGoalsChart(insights.goalProgress);
+      updateEtaChart(insights.etaFastest);
+    }
+
+    function calculateInsights(category, subcategory, monthKey){
+      if(userData.entries.length===0){ return { focusArea: 'No data available. Start adding entries to see insights.', scoreTrend:{labels:[],data:[]}, priorities:{labels:[],data:[]}, goalProgress: goalsProgressDS(), etaFastest: {labels:[], data:[]} }; }
+      let entries = [...userData.entries];
+      if(monthKey && monthKey!=='all'){
+        entries = entries.filter(e=>{ const d=new Date(e.date); const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; return k===monthKey; });
+      }
+      if(entries.length===0){ return { focusArea: 'No entries in this month.', scoreTrend:{labels:[],data:[]}, priorities:{labels:[],data:[]}, goalProgress: goalsProgressDS(), etaFastest: fastestETA() }; }
+
+      const categoryAgg = {};
+      const subAgg = {}; 
+      entries.forEach(e=>{ Object.entries(e.categories).forEach(([cat,subs])=>{ if(!categoryAgg[cat]) categoryAgg[cat]={total:0,count:0}; Object.entries(subs).forEach(([subkey,data])=>{ if(data && data.score!=null){ const s=parseInt(data.score); categoryAgg[cat].total+=s; categoryAgg[cat].count++; if(!subAgg[subkey]) subAgg[subkey]={total:0,count:0,category:cat}; subAgg[subkey].total+=s; subAgg[subkey].count++; } }); }); });
+      const categoryAverages = Object.fromEntries(Object.entries(categoryAgg).map(([k,v])=>[k, v.count? (v.total/v.count) : 0]));
+      const subcategoryAverages = Object.fromEntries(Object.entries(subAgg).map(([k,v])=>[k, { avg: v.count? (v.total/v.count):0, category: v.category, count:v.count }]));
+
+    
+      let focusArea = 'All areas are performing well!';
+      let lowest = 6; let label='';
+      if(category==='all'){
+        Object.entries(categoryAverages).forEach(([cat,avg])=>{ if(avg<lowest){ lowest=avg; label = `Focus on ${capitalizeFirstLetter(cat)} (Score: ${avg.toFixed(1)})`; }});
+        if(label) focusArea = label;
+      }else if(subcategory==='all'){
+        Object.entries(subcategoryAverages).forEach(([sub,obj])=>{ if(obj.category===category && obj.avg<lowest){ lowest=obj.avg; label = `Focus on ${formatSubcategoryName(sub)} in ${capitalizeFirstLetter(category)} (Score: ${obj.avg.toFixed(1)})`; }});
+        if(label) focusArea = label;
+      }else{
+        const obj = subcategoryAverages[subcategory]; if(obj){ focusArea = `Focus on ${formatSubcategoryName(subcategory)} in ${capitalizeFirstLetter(category)} (Score: ${obj.avg.toFixed(1)})`; }
+      }
+
+      const scoreTrend = calculateScoreTrend(entries, category, subcategory);
+      const priorities = calculatePriorities(categoryAverages, subcategoryAverages, category, subcategory);
+      const goalProgress = goalsProgressDS();
+      const etaFastest = fastestETA();
+
+      return { focusArea, scoreTrend, priorities, goalProgress, etaFastest };
+    }
+
+    function calculateScoreTrend(entries, category, subcategory){
+      const sorted = [...entries].sort((a,b)=> new Date(a.date)-new Date(b.date));
+      const labels=[]; const data=[];
+      sorted.forEach(entry=>{
+        let total=0,count=0;
+        if(category==='all'){
+          Object.values(entry.categories).forEach(subs=>{ Object.values(subs).forEach(v=>{ if(v && v.score!=null){ total+=parseInt(v.score); count++; } }); });
+        }else if(subcategory==='all'){
+          if(entry.categories[category]){ Object.values(entry.categories[category]).forEach(v=>{ if(v && v.score!=null){ total+=parseInt(v.score); count++; } }); }
+        }else{
+          const v = entry.categories[category] && entry.categories[category][subcategory]; if(v && v.score!=null){ total+=parseInt(v.score); count++; }
+        }
+        if(count>0){ labels.push(formatDate(entry.date,true)); data.push((total/count).toFixed(1)); }
+      });
+      return {labels, data};
+    }
+
+    function calculatePriorities(categoryAverages, subcategoryAverages, category, subcategory){
+      const labels=[]; const data=[];
+      if(category==='all'){
+        Object.entries(categoryAverages).forEach(([cat,avg])=>{ labels.push(capitalizeFirstLetter(cat)); data.push(avg.toFixed? avg.toFixed(1) : avg); });
+      }else if(subcategory==='all'){
+        Object.entries(subcategoryAverages).forEach(([sub,obj])=>{ if(obj.category===category){ labels.push(formatSubcategoryName(sub)); data.push(obj.avg.toFixed(1)); } });
+      }else{
+        const obj = subcategoryAverages[subcategory]; labels.push(formatSubcategoryName(subcategory)); data.push(obj? obj.avg.toFixed(1): '0');
+      }
+      return {labels, data};
+    }
+
+    function goalsProgressDS(){
+      const labels=[]; const data=[]; userData.goals.forEach(g=>{ labels.push(g.title); data.push(parseInt(g.progress)||0); }); return {labels,data};
+    }
+
+    function fastestETA(){
+      const now = Date.now();
+      const etas = [];
+      userData.goals.forEach(g=>{
+        const created = g.createdAt? new Date(g.createdAt).getTime() : now;
+        const daysElapsed = Math.max(1, (now - created)/(1000*60*60*24));
+        const current = Math.max(0, Math.min(100, parseInt(g.progress)||0));
+        let daysRemaining;
+        if(current>0){ const rate = current/daysElapsed; daysRemaining = (100-current)/Math.max(rate, 0.01); } else if(g.date){ const target = new Date(g.date).getTime(); daysRemaining = Math.max(0, (target-now)/(1000*60*60*24)); } else { daysRemaining = 30; }
+        etas.push({ title:g.title, category:g.category, days: daysRemaining });
+      });
+      etas.sort((a,b)=>a.days-b.days);
+      const top = etas.slice(0, Math.min(5, etas.length));
+      return { labels: top.map(t=>t.title), data: top.map(t=>Number(t.days.toFixed(1))) };
+    }
+
+    function updateScoreTrendChart(ds){ const ctx=document.getElementById('score-trend-chart').getContext('2d'); if(window.scoreTrendChart){ window.scoreTrendChart.destroy(); } window.scoreTrendChart = new Chart(ctx,{ type:'line', data:{ labels: ds.labels, datasets:[{ label:'Score Trend', data: ds.data, borderColor:'#7e22ce', backgroundColor:'rgba(126,34,206,.1)', tension:.3, fill:true }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:5, grid:{ color:'rgba(255,255,255,.1)' } }, x:{ grid:{ display:false } } }, plugins:{ legend:{ display:false } } } }); }
+    function updatePriorityChart(ds){ const ctx=document.getElementById('priority-chart').getContext('2d'); if(window.priorityChart){ window.priorityChart.destroy(); } window.priorityChart = new Chart(ctx,{ type:'bar', data:{ labels: ds.labels, datasets:[{ label:'Average Score', data: ds.data, backgroundColor:['rgba(239,68,68,.7)','rgba(245,158,11,.7)','rgba(34,197,94,.7)','rgba(59,130,246,.7)','rgba(126,34,206,.7)'], borderColor:['rgb(239,68,68)','rgb(245,158,11)','rgb(34,197,94)','rgb(59,130,246)','rgb(126,34,206)'], borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', scales:{ x:{ beginAtZero:true, max:5, grid:{ color:'rgba(255,255,255,.1)' } }, y:{ grid:{ display:false } } }, plugins:{ legend:{ display:false } } } }); }
+    function updateGoalsChart(ds){ const ctx=document.getElementById('goals-chart').getContext('2d'); if(window.goalsChart){ window.goalsChart.destroy(); } window.goalsChart = new Chart(ctx,{ type:'doughnut', data:{ labels: ds.labels, datasets:[{ label:'Progress (%)', data: ds.data, backgroundColor:['rgba(239,68,68,.7)','rgba(245,158,11,.7)','rgba(34,197,94,.7)','rgba(59,130,246,.7)','rgba(126,34,206,.7)'], borderColor:['rgb(239,68,68)','rgb(245,158,11)','rgb(34,197,94)','rgb(59,130,246)','rgb(126,34,206)'], borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } } } }); }
+    function updateEtaChart(ds){ const ctx=document.getElementById('eta-chart').getContext('2d'); if(window.etaChart){ window.etaChart.destroy(); } window.etaChart = new Chart(ctx,{ type:'bar', data:{ labels: ds.labels, datasets:[{ label:'Estimated Days to Complete', data: ds.data, backgroundColor:['rgba(34,197,94,.7)'], borderColor:['rgb(34,197,94)'], borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, grid:{ color:'rgba(255,255,255,.1)' } } }, plugins:{ legend:{ display:false } } } }); }
+
+    function setupCalendarModal(){
+      const btn = document.getElementById('history-calendar-btn');
+      const modal = document.getElementById('calendar-modal');
+      const closeBtns = modal.querySelectorAll('.close-modal');
+      btn.addEventListener('click',()=>{ renderCalendar(); modal.style.display='flex'; });
+      closeBtns.forEach(b=>b.addEventListener('click',()=>{ modal.style.display='none'; }));
+      document.getElementById('prev-month').addEventListener('click',()=>shiftCalendar(-1));
+      document.getElementById('next-month').addEventListener('click',()=>shiftCalendar(1));
+    }
+
+    let calRef = new Date();
+    function renderCalendar(){
+      const grid = document.querySelector('.calendar');
+      const header = document.getElementById('calendar-month');
+      const y = calRef.getFullYear(); const m = calRef.getMonth();
+      header.textContent = new Date(y,m,1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
+      // clear old dates
+      grid.querySelectorAll('.calendar-date').forEach(el=>el.remove());
+      const first = new Date(y,m,1).getDay(); const days = new Date(y, m+1, 0).getDate();
+      for(let i=0;i<first;i++){ const ph = document.createElement('div'); ph.className='calendar-date'; ph.style.visibility='hidden'; grid.appendChild(ph); }
+      for(let d=1; d<=days; d++){
+        const el = document.createElement('div'); el.className='calendar-date'; el.textContent=d;
+        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        if(userData.entries.some(e=>e.date===dateStr)) el.classList.add('has-entry');
+        el.addEventListener('click',()=>{ document.getElementById('entry-date').value=dateStr; loadEntryForDate(dateStr); document.getElementById('calendar-modal').style.display='none'; document.querySelector('.nav-item[data-view="daily-view"]').click(); });
+        grid.appendChild(el);
+      }
+    }
+    function shiftCalendar(delta){ calRef.setMonth(calRef.getMonth()+delta); renderCalendar(); }
+
+    function formatDate(dateString, short=false){ if(!dateString) return '—'; const date = new Date(dateString); if(isNaN(date)) return dateString; if(short) return date.toLocaleDateString(undefined,{month:'short', day:'numeric'}); return date.toLocaleDateString(undefined,{weekday:'long', year:'numeric', month:'long', day:'numeric'}); }
+    function getCategoryIcon(category){ const icons={ productivity:'tasks', health:'heartbeat', development:'brain', wellbeing:'smile' }; return icons[category]||'circle'; }
+    function calculateCategoryAverage(subs){ let t=0,c=0; Object.values(subs).forEach(s=>{ if(s&&s.score!=null){ t+=parseInt(s.score); c++; } }); return c>0? (t/c).toFixed(1):'N/A'; }
+    function capitalizeFirstLetter(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+    function formatSubcategoryName(k){ return k.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' '); }
+    function escapeHtml(str){ return (str||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+
+   
+    (function dashboardBootstrap(){
+      const LOGIN = "Login.html"; 
+      const currentUser = localStorage.getItem('pulseLoggedInUser');
+      if(!currentUser){
+
+        window.location.href = LOGIN;
+        return;
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        if(localStorage.getItem('pulseShowOverlay') === '1'){
+          const overlay = document.getElementById('startup-overlay');
+          overlay.classList.add('active');
+          setTimeout(()=>{ localStorage.removeItem('pulseShowOverlay'); overlay.classList.remove('active'); }, 900);
+        }
+
+        try {
+          document.getElementById('user-email').textContent = currentUser;
+        } catch(e){  }
+
+
+        const toggle = document.getElementById('user-menu-toggle');
+        const dropdown = document.getElementById('user-dropdown');
+        toggle && toggle.addEventListener('click', (ev)=>{
+          ev.stopPropagation();
+          dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
+        });
+        const logoutBtn = document.getElementById('menu-logout');
+        logoutBtn && logoutBtn.addEventListener('click', ()=>{
+          localStorage.removeItem('pulseLoggedInUser');
+          window.location.href = LOGIN;
+        });
+
+        document.addEventListener('click', (e)=>{
+          if(!dropdown.contains(e.target) && e.target !== toggle){
+            dropdown.style.display = 'none';
+          }
+        });
+
+        initApp();
+      });
+    })();
+
+  </script>
+</body>
+</html>
