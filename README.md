@@ -3,10 +3,6 @@
 Pulse Growth is a fully interactive, client-side productivity and growth-tracking application designed to help users monitor habits, track personal performance, and visualize long-term improvement trends.
 Built entirely using HTML, CSS, JavaScript, and Chart.js, the app requires no backend, and all data is stored securely in the user’s browser using localStorage.
 
-🚀 Live Demo
-
-👉 https://your-username.github.io/pulse-growth/
-
 ✨ Features
 🔐 User Authentication
 
