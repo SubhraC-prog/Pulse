@@ -2,7 +2,7 @@ const CACHE_NAME = "pulse-cache-v1";
 
 const FILES_TO_CACHE = [
   "./",
-  "./Login.html",
+  "./index.html",
   "./Dashboard.html",
   "./manifest.json",
   "./Icon.png",
@@ -46,3 +46,4 @@ self.addEventListener("fetch", event => {
     })
   );
 });
+
