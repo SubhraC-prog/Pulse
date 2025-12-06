@@ -2,7 +2,7 @@
   "name": "Pulse Growth Dashboard",
   "short_name": "Pulse",
   "description": "A personal productivity and performance dashboard with login, analytics, goal tracking and offline-first support.",
-  "start_url": "Login.html",
+  "start_url": "/index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -21,3 +21,4 @@
     }
   ]
 }
+
