@@ -2,9 +2,9 @@ const CACHE_NAME = "pulse-cache-v2";
 
 const FILES_TO_CACHE = [
   "./index.html",
-  "./Dashboard.html",
+  "./dashboard.html",
   "./manifest.json",
-  "./Icon.png"
+  "./icon.png"
 ];
 
 // Install SW
@@ -44,6 +44,7 @@ self.addEventListener("fetch", event => {
     })
   );
 });
+
 
 
 
